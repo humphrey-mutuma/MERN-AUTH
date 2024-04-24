@@ -1,8 +1,16 @@
 
-#  MERN Stack AUTH 
+#  MERN Stack AUTH  Boilerplate
 ## Tech Stack
-`Front-end - NextJs, Tailwind, shadcn, react-hook-form, axios`
+- Front-end - NextJs, Tailwind, shadcn, react-hook-form, axios
 
-`Back-end - ExpressJs, react-hook-form, Docker, jwt, mail-OTP `
+- Back-end - ExpressJs, Docker, jwt
 
-`DB - MongoDB - mongoose ODM`
+- DB - MongoDB - mongoose ODM
+
+### Basic Functionalities
+- Registration (email & password)
+- Email verification with Magic Link
+- Login (access & refresh tokens assignment)
+- Password Reset
+- Log Out
+- Persist session till refresh token expiry

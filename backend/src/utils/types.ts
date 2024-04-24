@@ -1,7 +1,9 @@
 // Define a custom type for the decoded token
 export interface DecodedToken {
-  id: string;
+  _id: string;
   email: string;
+  name: string;
+  exp: number;
   // Add other properties if needed
 }
 export interface User {

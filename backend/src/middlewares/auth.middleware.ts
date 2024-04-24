@@ -5,7 +5,7 @@ import UserModel from "../models/user.model";
 
 interface ExtendedRequest extends Request {
   user?: {
-    id: string;
+    _id: string;
     email: string;
     // Other user properties
   } | null;
@@ -16,46 +16,37 @@ export async function protect(
   res: Response,
   next: NextFunction
 ) {
-  let token;
+  // Read JWT from the 'jwt' cookie
+  const access_token = req.headers.authorization.split(" ")[1];
 
-  if (
-    req.headers.authorization &&
-    req.headers.authorization.startsWith("Bearer")
-  ) {
-    // Check if JWT_SECRET is defined
-    if (!process.env.JWT_SECRET) {
-      throw new Error(
-        "JWT_SECRET is not defined in the environment variables."
-      );
-    }
-    // ********* check if user has an active session here
-
-    try {
-      // Get token from header
-      token = req.headers.authorization.split(" ")[1];
-
-      // Verify token
-      const decoded = jwt.verify(token, process.env.JWT_SECRET) as DecodedToken;
-
-      // Get user from the token
-      req.user = await UserModel.findOne(
-        {
-          id: decoded.id,
-        },
-        "id email "
-      );
-
-      next();
-    } catch (error) {
-      console.log(error);
-      res.status(401);
-      throw new Error("Not authorized");
-    } finally {
-    }
+  // Check if we have access token and JWT_SECRET
+  if (!access_token?.trim() || !process.env.JWT_SECRET) {
+    return res.status(401).json({ message: "Token or Secret Not Found!" });
   }
 
-  if (!token) {
+  try {
+    // ********* check if the token is expired or will expire in ! mins time
+    // Verify token
+    const decodedToken = jwt.verify(
+      access_token,
+      process.env.JWT_SECRET
+    ) as DecodedToken;
+
+    // If the token is expired  return a 401 status response
+    if (decodedToken) {
+      // return user from the token
+      req.user = decodedToken;
+    } else {
+      return res
+        .status(401)
+        .json({ message: "Token Expired! Refresh It", isExpired: true });
+    }
+
+    next();
+  } catch (error) {
+    console.log(error);
     res.status(401);
-    throw new Error("Not authorized, no token");
+    throw new Error("Not authorized");
+  } finally {
   }
 }

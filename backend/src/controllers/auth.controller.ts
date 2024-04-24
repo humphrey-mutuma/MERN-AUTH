@@ -6,26 +6,22 @@ import UserModel from "../models/user.model";
 
 interface ExtendedRequest extends Request {
   user?: {
-    id: string;
+    _id: string;
     email: string;
+    name: string;
     // Other user properties
   };
 }
-// Set cookies with tokens
-const accessTokenCookieOptions: CookieOptions = {
-  httpOnly: true,
-  sameSite: "lax",
-  secure: process.env.NODE_ENV === "production" ? true : false, // Set to true in production if using HTTPS
-  expires: new Date(Date.now() + 15 * 60 * 1000), // 15 minutes in milliseconds
-  maxAge: 15 * 60, // 15 minutes in seconds
-};
+interface LoginRequestBody extends Request {
+  email: string;
+  password: string;
+}
 
 const refreshTokenCookieOptions: CookieOptions = {
   httpOnly: true,
-  sameSite: "lax",
-  secure: process.env.NODE_ENV === "production" ? true : false, // Set to true in production if using HTTPS
-  expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days in milliseconds
-  maxAge: 7 * 24 * 60 * 60, // 7 days in seconds
+  secure: true, // Use secure cookies in production
+  sameSite: "strict", // Prevent CSRF attacks
+  expires: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours from now
 };
 
 // @desc    register a user
@@ -36,7 +32,7 @@ export async function registerUserHandler(
   next: NextFunction
 ) {
   const { email, name, password } = req.body;
-  if (!email?.trim() || !password?.trim()) {
+  if (!email?.trim() || !name?.trim() || !password?.trim()) {
     return res.status(400).json({ message: "Email or password not found!" });
   }
 
@@ -65,14 +61,13 @@ export async function registerUserHandler(
       email,
       name,
       password: hashedPassword,
-     });
+    });
     if (newUser) {
       // verify user email using an OTP or magic link
 
-
       // after verifying user email, update with when it was verified
 
-      return res.status(200).json({
+      return res.status(201).json({
         message: "User Successfully created!",
         user: {
           id: newUser.id,
@@ -90,14 +85,14 @@ export async function registerUserHandler(
 // @desc    Get a user
 // @route   GET /api/users/ id
 export async function loginUserHandler(
-  req: Request,
+  req: LoginRequestBody,
   res: Response,
   next: NextFunction
 ) {
   const { email, password } = req.body;
   // const { id, email } = req.user;
 
-  if (!email?.trim() || !password?.trim()) {
+  if (!email?.toString().trim() || !password?.toString().trim()) {
     return res.status(400).json({ message: "Email or password not found!" });
   }
 
@@ -113,28 +108,27 @@ export async function loginUserHandler(
     // check used password is correct
     if (user && (await bcrypt.compare(password, user.password))) {
       // Generate access token
-      const {
-        accessToken,
-        refreshToken,
-        accessTokenExpiration,
-        refreshTokenExpiration,
-      } = await generateTokens(user);
-
-      res.cookie("access_token", accessToken, accessTokenCookieOptions);
-      res.cookie("refresh_token", refreshToken, refreshTokenCookieOptions);
-      res.cookie("logged_in", true, {
-        ...accessTokenCookieOptions,
-        httpOnly: false,
+      const { accessToken, refreshToken } = await generateTokens(user);
+      // Set a cookie named "exampleCookie" with value "cookieValue"
+      res.cookie("exampleCookie", "cookieValue", {
+        maxAge: 900000, // Expires after 15 minutes
+        httpOnly: false, // Cookie is accessible only by the server
+        secure: false, // Set to true if using HTTPS
       });
 
-      return res.json({
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        accessToken,
-      });
+      return (
+        res
+          .status(200)
+          // .cookie("refresh_token", refreshToken, refreshTokenCookieOptions)
+          .json({
+            _id: user._id,
+            name: user.name,
+            email: user.email,
+            accessToken,
+          })
+      );
     } else {
-      return res.status(400).json({ message: "Invalid credentials" });
+      return res.status(400).json({ message: "Invalid Credentials!" });
     }
   } catch (error) {
     console.error(error);
@@ -150,38 +144,38 @@ export async function refreshAccessTokenHandler(
   next: NextFunction
 ) {
   const refresh_token = req.cookies.refresh_token;
-
-  if (!refresh_token?.trim() || !process.env.JWT_SECRET_REFRESH) {
-    return res
-      .status(400)
-      .json({ message: "Refresh token or secret Not Found!" });
+ 
+  // Check if we have access token and JWT_SECRET
+  if (!refresh_token || !process.env.JWT_SECRET_REFRESH) {
+    return res.status(401).json({ message: "Token or Secret Not Found!" });
   }
 
   try {
     // Verify refresh token
-    const decoded = jwt.verify(
+    const decodedToken = jwt.verify(
       refresh_token,
       process.env.JWT_SECRET_REFRESH
     ) as DecodedToken;
 
-    // Sign new access token
-    const {
-      accessToken,
-      refreshToken,
-      accessTokenExpiration,
-      refreshTokenExpiration,
-    } = await generateTokens(decoded);
+    // If the token is expired or will expire soon, return a 401 status response
+    if (decodedToken) {
+      // Sign new access token
+      const { accessToken, refreshToken } = await generateTokens(decodedToken);
 
-    // 4. Add Cookies and return res
-    res.cookie("access_token", accessToken, accessTokenCookieOptions);
-    res.cookie("logged_in", true, {
-      ...accessTokenCookieOptions,
-      httpOnly: false,
-    });
-
-    return res.json({
-      accessToken,
-    });
+      // 4. Add Cookies and return res
+      // token rotation - issue new refresh token for all new access token request
+      return res
+        .status(200)
+        .cookie("refresh_token", refreshToken, refreshTokenCookieOptions)
+        .json({
+          accessToken,
+          message: "New Token Issued!",
+        });
+    } else {
+      return res
+        .status(401)
+        .json({ message: "Token Expired! Please Login!", isExpired: true });
+    }
   } catch (error) {
     console.error(error);
     next(error); // Forward the error to the error handling middleware
@@ -190,7 +184,7 @@ export async function refreshAccessTokenHandler(
 
 // @desc    log user out
 // @route   GET /api/auth/logout
-export async function loginUserOutHandler(
+export async function logOutUserHandler(
   req: ExtendedRequest,
   res: Response,
   next: NextFunction
@@ -198,15 +192,15 @@ export async function loginUserOutHandler(
   // get user from middleware req
   const user = req.user;
   if (!user) {
-    return res.status(200).json({ message: "User credentials Not found!" });
+    return res.status(200).json({ message: "User Not found!" });
   }
 
   try {
     // invalidate access/refresh token
-
-    if (user) {
-      return res.status(200).json({ message: "Successfully logged Out!" });
-    }
+    return res
+      .status(200)
+      .clearCookie("refresh_token")
+      .json({ message: "Successfully logged Out!" });
   } catch (error) {
     console.error(error);
     next(error); // Forward the error to the error handling middleware
@@ -215,11 +209,8 @@ export async function loginUserOutHandler(
 
 // ***************************************************************************************
 // Generate JWT
-const generateTokens = (user: { id: string; email: string }) => {
+const generateTokens = (user: DecodedToken) => {
   const currentTimestamp = Math.floor(Date.now() / 1000); // Current timestamp in seconds
-
-  const accessTokenExpiration = currentTimestamp + 15 * 60; // 15 minutes from now
-  const refreshTokenExpiration = currentTimestamp + 7 * 24 * 60 * 60; // 7 days from now
 
   // Check if JWT_SECRET is defined
   if (!process.env.JWT_SECRET || !process.env.JWT_SECRET_REFRESH) {
@@ -230,22 +221,24 @@ const generateTokens = (user: { id: string; email: string }) => {
 
   // Generate access token
   const accessToken = jwt.sign(
-    { id: user.id, email: user.email, timestamp: currentTimestamp },
+    {
+      _id: user._id,
+      email: user.email,
+      name: user.name,
+    },
     process.env.JWT_SECRET,
     { expiresIn: "1m" }
   );
 
   // Generate refresh token
   const refreshToken = jwt.sign(
-    { id: user.id, email: user.email, timestamp: currentTimestamp },
+    { _id: user._id },
     process.env.JWT_SECRET_REFRESH,
-    { expiresIn: "30d" }
+    { expiresIn: "24h" }
   );
 
   return {
     accessToken,
     refreshToken,
-    accessTokenExpiration,
-    refreshTokenExpiration,
   };
 };
