@@ -17,7 +17,7 @@ COPY . .
 EXPOSE 5000
 
 # run app in dev mode
-CMD ["npm", "run", "dev"]
+# CMD ["npm", "run", "dev"]
 # Production script
-# CMD ["npm", "start",] // Prod
+CMD ["npm", "start"] 
  

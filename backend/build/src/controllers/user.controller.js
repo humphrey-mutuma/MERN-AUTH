@@ -8,158 +8,82 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteUser = exports.updateUser = exports.createUser = exports.getUsers = exports.getUser = void 0;
-const db_1 = require("../config/db");
-const asyncErrorHandler_middleware_1 = require("../middlewares/asyncErrorHandler.middleware");
+exports.deleteUser = exports.updateUser = exports.getUserDetails = void 0;
+const user_model_1 = __importDefault(require("../models/user.model"));
 // @desc    Get a user
 // @route   GET /api/users/ id
-const getUser = (0, asyncErrorHandler_middleware_1.asyncErrorHandler)((req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    const { id } = req.params;
-    // const { startDate, endDate } = req.query;
-    const startDate = req.query.startDate;
-    const endDate = req.query.endDate;
-    try {
-        const user = yield db_1.prismaClient.user.findUnique({
-            where: {
-                id: id,
-            },
-            include: {
-                plans: {
-                    where: {
-                        date: {
-                            gte: new Date(startDate),
-                            lte: new Date(endDate),
-                        },
-                    },
-                    select: {
-                        id: true,
-                        breakfast: true,
-                        date: true,
-                        dinner: true,
-                        lunch: true,
-                        notes: true,
-                        snacks: true,
-                        createdAt: true,
-                    },
-                },
-            },
-        });
-        if (user) {
-            return res.status(200).json(user);
+function getUserDetails(req, res, next) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const { id } = req.params;
+        if (!(id === null || id === void 0 ? void 0 : id.trim())) {
+            return res.status(200).json({ message: "User Id not Found" });
         }
-    }
-    catch (error) {
-        console.error(error);
-        next(error); // Forward the error to the error handling middleware
-    }
-    finally {
-        yield (0, db_1.disconnectClient)();
-    }
-}));
-exports.getUser = getUser;
-// @desc    Get a user
-// @route   GET /api/users/ id
-const getUsers = (0, asyncErrorHandler_middleware_1.asyncErrorHandler)((req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const allUsers = yield db_1.prismaClient.user.findMany();
-        if (allUsers) {
-            return res.status(200).json(allUsers);
+        try {
+            const user = yield user_model_1.default.findById(id, "-password");
+            if (user) {
+                return res.status(200).json(user);
+            }
         }
-    }
-    catch (error) {
-        console.error(error);
-        next(error); // Forward the error to the error handling middleware
-    }
-    finally {
-        yield (0, db_1.disconnectClient)();
-    }
-}));
-exports.getUsers = getUsers;
-// @desc    create a user
-// @route   POST /api/users
-const createUser = (0, asyncErrorHandler_middleware_1.asyncErrorHandler)((req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    const { email, name } = req.body;
-    if (!(email === null || email === void 0 ? void 0 : email.trim()) || !(name === null || name === void 0 ? void 0 : name.trim())) {
-        return res.status(400).json({ message: "Missing email or name!" });
-    }
-    try {
-        const newUser = yield db_1.prismaClient.user.create({
-            data: {
-                email,
-                name,
-            },
-        });
-        if (newUser) {
-            return res.status(200).json(newUser);
+        catch (error) {
+            console.error(error);
+            next(error); // Forward the error to the error handling middleware
         }
-    }
-    catch (error) {
-        console.error(error);
-        next(error); // Forward the error to the error handling middleware
-        return res.status(400).json(error);
-    }
-    finally {
-        yield (0, db_1.disconnectClient)();
-    }
-}));
-exports.createUser = createUser;
+    });
+}
+exports.getUserDetails = getUserDetails;
 // @desc    update user details
 // @route   PUT /api/users/id
-const updateUser = (0, asyncErrorHandler_middleware_1.asyncErrorHandler)((req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    const { email, name } = req.body;
-    const { id } = req.params;
-    if (!(email === null || email === void 0 ? void 0 : email.trim()) || !(name === null || name === void 0 ? void 0 : name.trim())) {
-        return res.status(400).json({ message: "Missing email or name!" });
-    }
-    try {
-        const newUser = yield db_1.prismaClient.user.update({
-            where: {
-                id: id,
-            },
-            data: {
+function updateUser(req, res, next) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const { email, name } = req.body;
+        const { id } = req.params;
+        if (!(email === null || email === void 0 ? void 0 : email.trim()) || !(name === null || name === void 0 ? void 0 : name.trim())) {
+            return res.status(400).json({ message: "Missing email or name!" });
+        }
+        try {
+            const updated_user = yield user_model_1.default.updateOne({
+                id,
+            }, {
                 email,
                 name,
-            },
-        });
-        if (newUser) {
-            return res.status(200).json(newUser);
+            });
+            if (updated_user) {
+                return res.status(200).json(updated_user);
+            }
         }
-    }
-    catch (error) {
-        console.error(error);
-        next(error); // Forward the error to the error handling middleware
-        return res.status(400).json(error);
-    }
-    finally {
-        yield (0, db_1.disconnectClient)();
-    }
-}));
+        catch (error) {
+            console.error(error);
+            next(error); // Forward the error to the error handling middleware
+            return res.status(400).json(error);
+        }
+    });
+}
 exports.updateUser = updateUser;
 // @desc    delete a user
 // @route   DELETE /api/users/ id
-const deleteUser = (0, asyncErrorHandler_middleware_1.asyncErrorHandler)((req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    const { id } = req.params;
-    if (!id) {
-        return res.status(400).json({ message: "Missing User" });
-    }
-    try {
-        const deletedUser = yield db_1.prismaClient.user.delete({
-            where: {
-                id: id,
-            },
-        });
-        if (deletedUser) {
-            return res.status(200).json(deletedUser);
+function deleteUser(req, res, next) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const { id } = req.params;
+        if (!(id === null || id === void 0 ? void 0 : id.trim())) {
+            return res.status(400).json({ message: "Missing User id" });
         }
-    }
-    catch (error) {
-        console.error(error);
-        next(error); // Forward the error to the error handling middleware
-        return res.status(400).json(error);
-    }
-    finally {
-        yield (0, db_1.disconnectClient)();
-    }
-}));
+        try {
+            const deletedUser = yield user_model_1.default.deleteOne({
+                id: id,
+            });
+            if (deletedUser) {
+                return res.status(200).json(deletedUser);
+            }
+        }
+        catch (error) {
+            console.error(error);
+            next(error); // Forward the error to the error handling middleware
+            return res.status(400).json(error);
+        }
+    });
+}
 exports.deleteUser = deleteUser;

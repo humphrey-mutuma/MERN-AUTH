@@ -110,16 +110,11 @@ export async function loginUserHandler(
       // Generate access token
       const { accessToken, refreshToken } = await generateTokens(user);
       // Set a cookie named "exampleCookie" with value "cookieValue"
-      res.cookie("exampleCookie", "cookieValue", {
-        maxAge: 900000, // Expires after 15 minutes
-        httpOnly: false, // Cookie is accessible only by the server
-        secure: false, // Set to true if using HTTPS
-      });
-
+    
       return (
         res
           .status(200)
-          // .cookie("refresh_token", refreshToken, refreshTokenCookieOptions)
+          .cookie("refresh_token", refreshToken, refreshTokenCookieOptions)
           .json({
             _id: user._id,
             name: user.name,
@@ -210,8 +205,7 @@ export async function logOutUserHandler(
 // ***************************************************************************************
 // Generate JWT
 const generateTokens = (user: DecodedToken) => {
-  const currentTimestamp = Math.floor(Date.now() / 1000); // Current timestamp in seconds
-
+ 
   // Check if JWT_SECRET is defined
   if (!process.env.JWT_SECRET || !process.env.JWT_SECRET_REFRESH) {
     throw new Error(

@@ -12,4 +12,6 @@ exports.corsOptions = {
             callback(new Error("Not allowed by CORS"));
         }
     },
+    credentials: true,
+    exposedHeaders: ["WWW-Authenticate"],
 };
