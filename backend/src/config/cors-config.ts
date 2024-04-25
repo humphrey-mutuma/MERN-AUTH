@@ -1,5 +1,5 @@
 // list of allowed domains
-const whitelist = ["http://localhost:3000", ""];
+const whitelist = ["http://localhost:3000", `${process.env.CLIENT_BASE_URL}`];
 
 export const corsOptions = {
   origin: function (origin: any, callback: any) {
@@ -12,4 +12,3 @@ export const corsOptions = {
   credentials: true,
   exposedHeaders: ["WWW-Authenticate"],
 };
- 
