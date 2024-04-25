@@ -33,10 +33,10 @@ export default function SessionProvider({
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
   // auto log in user from token.
-  const access_token = localStorage.getItem("a_t");
-  // Retrieve the refresh token from cookies
 
   useEffect(() => {
+    const access_token = localStorage.getItem("a_t");
+    // Retrieve the refresh token from cookies
     if (access_token) {
       const decodedToken = jwt.decode(access_token);
 
@@ -55,7 +55,7 @@ export default function SessionProvider({
         }));
       }
     }
-  }, [access_token]);
+  }, []);
 
   // refresh access token
   const refreshToken = async () => {

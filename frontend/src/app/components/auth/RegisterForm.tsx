@@ -6,9 +6,8 @@ import Link from "next/link";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 
-
 export default function RegisterForm() {
-  const { user, isLoading, createAccount } = useSession();
+  const { isLoading, createAccount } = useSession();
 
   const {
     register,
