@@ -33,7 +33,7 @@ export default function SessionProvider({
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
   // auto log in user from token.
-
+  
   useEffect(() => {
     const access_token = localStorage.getItem("a_t");
     // Retrieve the refresh token from cookies
